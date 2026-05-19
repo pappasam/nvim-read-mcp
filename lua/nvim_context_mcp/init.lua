@@ -27,11 +27,9 @@ local defaults = {
 }
 
 local function default_state_dir()
-  if vim.env.XDG_STATE_HOME and vim.env.XDG_STATE_HOME ~= "" then
-    return vim.env.XDG_STATE_HOME .. "/nvim-context-mcp"
-  end
-
-  return vim.fn.expand("~/.local/state/nvim-context-mcp")
+  local getuid = uv.getuid or uv.os_getuid
+  local uid = getuid and getuid() or vim.env.USER or "unknown"
+  return "/tmp/nvim-context-mcp-" .. tostring(uid)
 end
 
 local function is_set(value)
@@ -51,14 +49,15 @@ function M.start(opts)
 
   state.state_dir = state.opts.state_dir
     or vim.env.NVIM_CONTEXT_MCP_STATE_DIR
-    or vim.env.NVIM_READ_MCP_STATE_DIR
     or default_state_dir()
   state.instances_dir = state.state_dir .. "/instances"
   state.instance_id = vim.fn.hostname() .. ":" .. tostring(vim.fn.getpid())
   state.socket_path = state.instances_dir .. "/" .. tostring(vim.fn.getpid()) .. ".sock"
   state.registry_path = state.instances_dir .. "/" .. tostring(vim.fn.getpid()) .. ".json"
 
-  vim.fn.mkdir(state.instances_dir, "p")
+  vim.fn.mkdir(state.instances_dir, "p", 448)
+  pcall(vim.fn.setfperm, state.state_dir, "rwx------")
+  pcall(vim.fn.setfperm, state.instances_dir, "rwx------")
   pcall(vim.fn.delete, state.socket_path)
 
   local server = uv.new_pipe(false)

@@ -36,17 +36,20 @@ pub fn state_dir() -> PathBuf {
         return PathBuf::from(path);
     }
 
-    if let Ok(path) = std::env::var("NVIM_READ_MCP_STATE_DIR") {
-        return PathBuf::from(path);
-    }
+    std::env::temp_dir().join(format!("nvim-context-mcp-{}", user_id()))
+}
 
-    if let Some(path) = std::env::var_os("XDG_STATE_HOME") {
-        return PathBuf::from(path).join("nvim-context-mcp");
-    }
+#[cfg(unix)]
+fn user_id() -> String {
+    // SAFETY: geteuid has no preconditions and does not dereference pointers.
+    unsafe { libc::geteuid() }.to_string()
+}
 
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".local/state/nvim-context-mcp")
+#[cfg(not(unix))]
+fn user_id() -> String {
+    std::env::var("USERNAME")
+        .or_else(|_| std::env::var("USER"))
+        .unwrap_or_else(|_| "unknown".to_string())
 }
 
 pub async fn list_instances() -> anyhow::Result<Vec<InstanceSummary>> {

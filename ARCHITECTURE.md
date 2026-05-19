@@ -10,7 +10,7 @@ Codex / Claude Code
 nvim-context-mcp Rust binary
     |
     v
-~/.local/state/nvim-context-mcp/instances/<pid>.sock
+/tmp/nvim-context-mcp-<uid>/instances/<pid>.sock
     |
     v
 Neovim Lua plugin
@@ -61,8 +61,10 @@ The tools are intentionally pull-based to avoid filling the agent context with u
 By default, instance registry files and sockets live under:
 
 ```text
-~/.local/state/nvim-context-mcp/instances/
+/tmp/nvim-context-mcp-<uid>/instances/
 ```
+
+The Neovim plugin creates the state directory and instances directory with `0700` permissions.
 
 Override with:
 
@@ -71,8 +73,6 @@ export NVIM_CONTEXT_MCP_STATE_DIR=/custom/state/dir
 ```
 
 Use the same value for Neovim and the MCP server if you override it.
-
-For compatibility with the earlier project name, the Rust server also checks `NVIM_READ_MCP_STATE_DIR` if `NVIM_CONTEXT_MCP_STATE_DIR` is not set.
 
 ## Naming
 

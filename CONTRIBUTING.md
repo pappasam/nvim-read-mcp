@@ -63,7 +63,7 @@ If you prefer not to install while iterating, build the debug binary and point t
 cargo build
 ```
 
-Start Neovim with the plugin enabled, then open a real project file. The plugin writes instance records and sockets under `~/.local/state/nvim-context-mcp/instances/` by default. You can verify the Lua side from inside Neovim with:
+Start Neovim with the plugin enabled, then open a real project file. The plugin writes instance records and sockets under `/tmp/nvim-context-mcp-<uid>/instances/` by default. You can verify the Lua side from inside Neovim with:
 
 ```vim
 :lua print(vim.inspect(require("nvim_context_mcp").visible_context()))

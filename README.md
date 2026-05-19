@@ -91,6 +91,8 @@ Optional configuration:
 
 ```lua
 require("nvim_context_mcp").setup({
+  -- Defaults to /tmp/nvim-context-mcp-<uid>.
+  state_dir = "/custom/state/dir",
   include_visible_text = true,
   include_terminal_buffers = false,
   max_lines_per_window = 200,
