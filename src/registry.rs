@@ -51,6 +51,10 @@ pub fn state_dir() -> PathBuf {
 
 pub async fn list_instances() -> anyhow::Result<Vec<InstanceSummary>> {
     let dir = state_dir().join("instances");
+    list_instances_from_dir(&dir).await
+}
+
+async fn list_instances_from_dir(dir: &std::path::Path) -> anyhow::Result<Vec<InstanceSummary>> {
     let mut read_dir = match tokio::fs::read_dir(&dir).await {
         Ok(read_dir) => read_dir,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -95,14 +99,29 @@ pub async fn list_instances() -> anyhow::Result<Vec<InstanceSummary>> {
 
 pub async fn find_instance(instance_id: Option<&str>) -> anyhow::Result<Option<InstanceRecord>> {
     let instances = list_instances().await?;
+    select_instance(instances, instance_id)
+}
+
+fn select_instance(
+    instances: Vec<InstanceSummary>,
+    instance_id: Option<&str>,
+) -> anyhow::Result<Option<InstanceRecord>> {
     let selected = if let Some(instance_id) = instance_id {
-        instances
-            .into_iter()
-            .find(|entry| {
-                entry.record.instance_id == instance_id
-                    || entry.record.pid.to_string() == instance_id
-            })
-            .map(|entry| entry.record)
+        let Some(entry) = instances.into_iter().find(|entry| {
+            entry.record.instance_id == instance_id || entry.record.pid.to_string() == instance_id
+        }) else {
+            return Ok(None);
+        };
+
+        if entry.stale {
+            anyhow::bail!(
+                "Neovim instance {} is stale; last heartbeat was {} ms ago",
+                entry.record.instance_id,
+                entry.age_ms
+            );
+        }
+
+        Some(entry.record)
     } else {
         instances
             .into_iter()
@@ -120,4 +139,36 @@ fn unix_seconds() -> i64 {
         .as_secs()
         .try_into()
         .unwrap_or(i64::MAX)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn record(updated_at: i64) -> InstanceRecord {
+        InstanceRecord {
+            schema_version: 1,
+            source: "nvim-context-mcp".to_string(),
+            instance_id: "host:42".to_string(),
+            pid: 42,
+            host: "host".to_string(),
+            cwd: "/tmp".to_string(),
+            socket_path: "/tmp/nvim-context-mcp.sock".to_string(),
+            updated_at,
+            active_path: None,
+        }
+    }
+
+    #[test]
+    fn explicit_stale_instance_returns_clear_error() {
+        let entry = InstanceSummary {
+            record: record(unix_seconds() - 120),
+            age_ms: 120_000,
+            stale: true,
+        };
+
+        let error = select_instance(vec![entry], Some("42")).unwrap_err();
+
+        assert!(error.to_string().contains("is stale"));
+    }
 }
