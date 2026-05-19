@@ -12,6 +12,7 @@ local state = {
   instances_dir = nil,
   socket_path = nil,
   registry_path = nil,
+  registry_payload = nil,
 }
 
 local defaults = {
@@ -121,6 +122,7 @@ function M.stop()
   if state.socket_path then
     pcall(vim.fn.delete, state.socket_path)
   end
+  state.registry_payload = nil
 end
 
 do
@@ -160,7 +162,13 @@ function M.write_registry()
     activePath = active_path,
   }
 
-  vim.fn.writefile({ vim.json.encode(record) }, state.registry_path)
+  local payload = vim.json.encode(record)
+  if payload == state.registry_payload then
+    return
+  end
+
+  vim.fn.writefile({ payload }, state.registry_path)
+  state.registry_payload = payload
 end
 
 function M.visible_context()
