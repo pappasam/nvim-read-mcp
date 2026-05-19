@@ -1,5 +1,7 @@
 # nvim-context-mcp
 
+[![Testing](https://github.com/pappasam/nvim-context-mcp/actions/workflows/testing.yml/badge.svg?branch=main)](https://github.com/pappasam/nvim-context-mcp/actions/workflows/testing.yml?query=branch%3Amain)
+
 Read-only MCP bridge for live Neovim context.
 
 This repository provides:
