@@ -107,7 +107,6 @@ pub async fn find_instance(instance_id: Option<&str>) -> anyhow::Result<Option<I
         instances
             .into_iter()
             .find(|entry| !entry.stale)
-            .or_else(|| None)
             .map(|entry| entry.record)
     };
 
