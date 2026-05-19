@@ -192,3 +192,29 @@ The equivalent raw MCP configuration, if you need to debug the plugin, is:
   }
 }
 ```
+
+To avoid repeated Claude Code approval prompts for this read-only MCP server, add the exact tool allowlist to `~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__nvim-context-mcp__nvim_list_instances",
+      "mcp__nvim-context-mcp__nvim_get_visible_context",
+      "mcp__nvim-context-mcp__nvim_list_buffers",
+      "mcp__nvim-context-mcp__nvim_get_buffer_text",
+      "mcp__nvim-context-mcp__nvim_get_diagnostics"
+    ]
+  }
+}
+```
+
+This is narrower than allowing the whole MCP server and will not automatically approve future tools if the server grows. If you are comfortable auto-approving all current and future tools from this server, the broader rule is:
+
+```json
+{
+  "permissions": {
+    "allow": ["mcp__nvim-context-mcp__*"]
+  }
+}
+```
