@@ -8,10 +8,7 @@ This repository is both:
 - an MCP server for Codex and Claude Code, via the Rust `nvim-context-mcp` binary
 - a Codex plugin package, via `.codex-plugin/plugin.json` and `.mcp.json`
 
-The Neovim plugin runs inside each Neovim instance and listens on a local Unix
-socket for a tiny read-only JSON protocol. The Rust binary is the MCP server
-that Codex or Claude launches over stdio. It discovers live Neovim instances,
-connects to the most recently active one, and exposes visible editor context.
+The Neovim plugin runs inside each Neovim instance and listens on a local Unix socket for a tiny read-only JSON protocol. The Rust binary is the MCP server that Codex or Claude launches over stdio. It discovers live Neovim instances, connects to the most recently active one, and exposes visible editor context.
 
 ## Naming
 
@@ -21,16 +18,14 @@ connects to the most recently active one, and exposes visible editor context.
 - `context`: describes the primary value, not just the transport
 - `mcp`: makes the integration protocol obvious
 
-The tradeoff is that it is still protocol-oriented. Good alternatives if the
-project positioning changes:
+The tradeoff is that it is still protocol-oriented. Good alternatives if the project positioning changes:
 
 - `nvim-visible-mcp`: best if the product promise is exactly "what is visible"
 - `mcp-neovim-context`: more discoverable for people searching MCP servers
 - `nvim-lens-mcp`: shorter, nicer, but less literal
 - `neovim-readonly-mcp`: very clear security posture, but longer
 
-This repo uses `nvim-context-mcp` because the user-facing value is editor
-context; the implementation still keeps the MCP surface read-only.
+This repo uses `nvim-context-mcp` because the user-facing value is editor context; the implementation still keeps the MCP surface read-only.
 
 ## Architecture
 
@@ -66,8 +61,7 @@ Build the MCP server:
 cargo install --path .
 ```
 
-Load the Neovim plugin with your plugin manager, or add this repo to
-`runtimepath` and call:
+Load the Neovim plugin with your plugin manager, or add this repo to `runtimepath` and call:
 
 ```lua
 require("nvim_context_mcp").setup()
@@ -92,8 +86,7 @@ After the binary is on `PATH`:
 codex mcp add nvim-context-mcp -- nvim-context-mcp
 ```
 
-This repo also includes `.codex-plugin/plugin.json` and `.mcp.json` so it can
-be packaged as a Codex plugin.
+This repo also includes `.codex-plugin/plugin.json` and `.mcp.json` so it can be packaged as a Codex plugin.
 
 ## Claude Code
 
