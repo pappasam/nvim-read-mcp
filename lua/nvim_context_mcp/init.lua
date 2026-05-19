@@ -26,6 +26,18 @@ local defaults = {
   debounce_ms = 150,
 }
 
+local function default_state_dir()
+  if vim.env.XDG_STATE_HOME and vim.env.XDG_STATE_HOME ~= "" then
+    return vim.env.XDG_STATE_HOME .. "/nvim-context-mcp"
+  end
+
+  return vim.fn.expand("~/.local/state/nvim-context-mcp")
+end
+
+local function is_set(value)
+  return value ~= nil and value ~= vim.NIL
+end
+
 function M.setup(opts)
   M.start(opts)
 end
@@ -40,7 +52,7 @@ function M.start(opts)
   state.state_dir = state.opts.state_dir
     or vim.env.NVIM_CONTEXT_MCP_STATE_DIR
     or vim.env.NVIM_READ_MCP_STATE_DIR
-    or (vim.fn.stdpath("state") .. "/nvim-context-mcp")
+    or default_state_dir()
   state.instances_dir = state.state_dir .. "/instances"
   state.instance_id = vim.fn.hostname() .. ":" .. tostring(vim.fn.getpid())
   state.socket_path = state.instances_dir .. "/" .. tostring(vim.fn.getpid()) .. ".sock"
@@ -228,14 +240,14 @@ function M.buffer_text(params)
   ensure_loaded_buffer(buf)
 
   local line_count = vim.api.nvim_buf_line_count(buf)
-  local start_line = clamp_line(params.startLine or 1, line_count + 1)
-  local end_line = clamp_line(params.endLine or line_count, line_count)
+  local start_line = clamp_line(is_set(params.startLine) and params.startLine or 1, line_count + 1)
+  local end_line = clamp_line(is_set(params.endLine) and params.endLine or line_count, line_count)
   if end_line < start_line then
     end_line = start_line - 1
   end
 
-  local max_lines = params.maxLines or state.opts.max_lines_per_buffer
-  local max_bytes = params.maxBytes or state.opts.max_bytes_per_buffer
+  local max_lines = is_set(params.maxLines) and params.maxLines or state.opts.max_lines_per_buffer
+  local max_bytes = is_set(params.maxBytes) and params.maxBytes or state.opts.max_bytes_per_buffer
   local lines, truncated = lines_from_buffer(buf, start_line, end_line, max_lines, max_bytes)
 
   return {
@@ -252,7 +264,7 @@ end
 function M.diagnostics(params)
   params = params or {}
   local buffers = {}
-  if params.bufnr or params.path then
+  if is_set(params.bufnr) or is_set(params.path) then
     buffers = { resolve_buffer(params) }
   else
     buffers = vim.api.nvim_list_bufs()
@@ -461,7 +473,7 @@ function buffer_summary(buf)
 end
 
 function resolve_buffer(params)
-  if params.bufnr then
+  if is_set(params.bufnr) then
     local bufnr = tonumber(params.bufnr)
     if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
       return bufnr
@@ -469,7 +481,7 @@ function resolve_buffer(params)
     error("invalid buffer number: " .. tostring(params.bufnr))
   end
 
-  if params.path then
+  if is_set(params.path) then
     local target = vim.fn.fnamemodify(params.path, ":p")
     for _, buf in ipairs(vim.api.nvim_list_bufs()) do
       local path = vim.api.nvim_buf_get_name(buf)
@@ -502,7 +514,7 @@ function clamp_line(value, max_line)
 end
 
 function positive_integer(value, fallback)
-  local number = tonumber(value)
+  local number = is_set(value) and tonumber(value) or nil
   if not number or number < 1 then
     number = tonumber(fallback) or 1
   end
@@ -515,7 +527,7 @@ function positive_integer(value, fallback)
 end
 
 function normalize_severity(value)
-  if value == nil or value == "" then
+  if not is_set(value) or value == "" then
     return nil
   end
   if type(value) == "number" then

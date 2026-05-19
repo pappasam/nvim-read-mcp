@@ -40,7 +40,7 @@ lint: require ## Run formatting and compile checks
 
 .PHONY: lua-smoke
 lua-smoke: require ## Smoke-test the Neovim plugin in headless Neovim
-	NVIM_CONTEXT_MCP_STATE_DIR=$(NVIM_CONTEXT_MCP_STATE_DIR) nvim --headless --clean +'set rtp+=.' +'lua local m = require("nvim_context_mcp"); m.setup({ heartbeat_ms = 60000 }); m.setup({ heartbeat_ms = 60000 }); assert(m.visible_context().schemaVersion == 1); assert(type(m.buffers().buffers) == "table"); assert(m.buffer_text({ maxLines = 1 }).schemaVersion == 1); assert(m.buffer_text({ maxLines = 0, maxBytes = 0 }).schemaVersion == 1); assert(type(m.diagnostics({ maxDiagnostics = 1, severity = "WARN" }).buffers) == "table"); m.stop()' +qa
+	NVIM_CONTEXT_MCP_STATE_DIR=$(NVIM_CONTEXT_MCP_STATE_DIR) nvim --headless --clean +'set rtp+=.' +'lua local m = require("nvim_context_mcp"); m.setup({ heartbeat_ms = 60000 }); m.setup({ heartbeat_ms = 60000 }); assert(m.visible_context().schemaVersion == 1); assert(type(m.buffers().buffers) == "table"); assert(m.buffer_text({ maxLines = 1 }).schemaVersion == 1); assert(m.buffer_text({ maxLines = 0, maxBytes = 0 }).schemaVersion == 1); assert(m.buffer_text({ bufnr = vim.NIL, path = vim.NIL, startLine = vim.NIL, endLine = vim.NIL, maxLines = vim.NIL, maxBytes = vim.NIL }).schemaVersion == 1); assert(type(m.diagnostics({ maxDiagnostics = 1, severity = "WARN" }).buffers) == "table"); assert(type(m.diagnostics({ bufnr = vim.NIL, path = vim.NIL, maxDiagnostics = vim.NIL, severity = vim.NIL }).buffers) == "table"); m.stop()' +qa
 
 .PHONY: tests
 tests: lint lua-smoke ## Run full local validation
