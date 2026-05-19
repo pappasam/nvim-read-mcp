@@ -1,4 +1,6 @@
 NVIM_CONTEXT_MCP_STATE_DIR := /tmp/nvim-context-mcp-test
+VERSION ?=
+TAG := v$(VERSION)
 
 .PHONY: help
 help: ## Print this help menu
@@ -13,6 +15,13 @@ require: ## Check that prerequisites are installed
 		fi
 	@if ! command -v nvim > /dev/null; then \
 		printf "\033[1m\033[31mERROR\033[0m: nvim not installed.\n" >&2 ; \
+		exit 1; \
+		fi
+
+.PHONY: require-release
+require-release: require ## Check that release prerequisites are installed
+	@if ! command -v gh > /dev/null; then \
+		printf "\033[1m\033[31mERROR\033[0m: gh not installed.\n" >&2 ; \
 		exit 1; \
 		fi
 
@@ -36,6 +45,24 @@ lua-smoke: require ## Smoke-test the Neovim plugin in headless Neovim
 .PHONY: tests
 tests: lint lua-smoke ## Run full local validation
 	cargo test
+
+.PHONY: release-check
+release-check: require-release ## Check release inputs and local validation
+	@if [ -z "$(VERSION)" ]; then \
+		printf "\033[1m\033[31mERROR\033[0m: VERSION is required. Example: make release VERSION=0.1.0\n" >&2 ; \
+		exit 1; \
+		fi
+	@if git rev-parse "$(TAG)" >/dev/null 2>&1; then \
+		printf "\033[1m\033[31mERROR\033[0m: tag $(TAG) already exists.\n" >&2 ; \
+		exit 1; \
+		fi
+	$(MAKE) tests
+
+.PHONY: release
+release: release-check ## Tag, push, and publish a GitHub release. Usage: make release VERSION=0.1.0
+	git tag "$(TAG)"
+	git push origin "$(TAG)"
+	gh release create "$(TAG)" --verify-tag --generate-notes
 
 .PHONY: install
 install: require ## Install the MCP server onto PATH

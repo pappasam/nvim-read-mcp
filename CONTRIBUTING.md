@@ -58,6 +58,19 @@ Update `ARCHITECTURE.md` when the runtime model, MCP resources, tools, state dir
 
 Keep Markdown prose soft-wrapped rather than hard-wrapped. Prefer one sentence or paragraph per line when practical so diffs stay clean.
 
+## Releases
+
+GitHub releases include pre-built MCP server binaries as release assets.
+The release workflow runs when a GitHub release is published, builds supported platform binaries from the release tag, packages each binary with `README.md` and `LICENSE`, generates `SHA256SUMS`, and attaches all files to the GitHub release.
+
+Publish a release with:
+
+```bash
+make release VERSION=0.1.0
+```
+
+Use concise release notes that mention user-facing changes and any compatibility notes.
+
 ## Commit Style
 
 Group changes by behavior. For example, keep a new MCP tool and its Rust/Lua/docs changes together, but put independent cleanup in a separate commit.
