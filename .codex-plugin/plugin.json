@@ -1,0 +1,29 @@
+{
+  "name": "nvim-context-mcp",
+  "version": "0.1.0",
+  "description": "Context MCP bridge that lets Codex inspect visible Neovim context.",
+  "author": {
+    "name": "pappasam",
+    "url": "https://github.com/pappasam"
+  },
+  "homepage": "https://github.com/pappasam/nvim-context-mcp",
+  "repository": "https://github.com/pappasam/nvim-context-mcp",
+  "license": "MIT",
+  "keywords": ["neovim", "mcp", "codex", "claude", "editor-context"],
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Neovim Context MCP",
+    "shortDescription": "Read visible Neovim context from Codex.",
+    "longDescription": "Expose visible windows, buffers, cursor locations, and selected editor metadata from live Neovim instances through a read-only MCP server.",
+    "developerName": "pappasam",
+    "category": "Productivity",
+    "capabilities": ["Read"],
+    "websiteURL": "https://github.com/pappasam/nvim-context-mcp",
+    "defaultPrompt": [
+      "Use my Neovim context to explain the visible code.",
+      "Review what I have open in Neovim.",
+      "Help with the code currently visible in Neovim."
+    ],
+    "brandColor": "#57A143"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "nvim-context-mcp": {
+      "command": "nvim-context-mcp"
+    }
+  }
+}
