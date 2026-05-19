@@ -12,6 +12,8 @@ Keep Rust changes focused around the existing module boundaries in `src/`.
 
 Keep Lua plugin changes focused in `lua/nvim_context_mcp/init.lua` unless the plugin grows enough to justify splitting modules.
 
+When editing Markdown, do not hard-wrap prose lines. Preserve soft-wrapped paragraphs unless a list, table, code block, or existing local structure requires line breaks.
+
 Preserve the read-only security posture. New tools should expose editor context, not editor mutation, shell commands, arbitrary Lua execution, or remote-control behavior.
 
 Run the full local validation with:

@@ -193,7 +193,25 @@ The equivalent raw MCP configuration, if you need to debug the plugin, is:
 }
 ```
 
-To avoid repeated Claude Code approval prompts for this read-only MCP server, add the exact tool allowlist to `~/.claude/settings.json`:
+To avoid repeated Claude Code approval prompts for this read-only MCP server, add the exact tool allowlist to `~/.claude/settings.json`.
+
+If Claude Code shows prompts like `plugin:nvim-context-mcp:nvim-context-mcp - nvim_get_diagnostics`, use the plugin-scoped server id:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin:nvim-context-mcp:nvim-context-mcp__nvim_list_instances",
+      "mcp__plugin:nvim-context-mcp:nvim-context-mcp__nvim_get_visible_context",
+      "mcp__plugin:nvim-context-mcp:nvim-context-mcp__nvim_list_buffers",
+      "mcp__plugin:nvim-context-mcp:nvim-context-mcp__nvim_get_buffer_text",
+      "mcp__plugin:nvim-context-mcp:nvim-context-mcp__nvim_get_diagnostics"
+    ]
+  }
+}
+```
+
+If you configured the MCP server directly with the raw `.mcp.json` entry instead of installing the Claude Code plugin, use the raw server id:
 
 ```json
 {
@@ -209,12 +227,17 @@ To avoid repeated Claude Code approval prompts for this read-only MCP server, ad
 }
 ```
 
-This is narrower than allowing the whole MCP server and will not automatically approve future tools if the server grows. If you are comfortable auto-approving all current and future tools from this server, the broader rule is:
+These explicit allowlists are narrower than allowing the whole MCP server and will not automatically approve future tools if the server grows. If you are comfortable auto-approving all current and future tools from this server, the broader rules are:
 
 ```json
 {
   "permissions": {
-    "allow": ["mcp__nvim-context-mcp__*"]
+    "allow": [
+      "mcp__plugin:nvim-context-mcp:nvim-context-mcp__*",
+      "mcp__nvim-context-mcp__*"
+    ]
   }
 }
 ```
+
+After editing `settings.json`, restart Claude Code or use `/permissions` to verify that the new allow rules are loaded.
