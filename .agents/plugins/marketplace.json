@@ -1,0 +1,20 @@
+{
+  "name": "nvim-context-mcp",
+  "interface": {
+    "displayName": "Neovim Context MCP"
+  },
+  "plugins": [
+    {
+      "name": "nvim-context-mcp",
+      "source": {
+        "source": "local",
+        "path": "./plugins/nvim-context-mcp"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

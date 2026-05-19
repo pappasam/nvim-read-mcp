@@ -130,13 +130,29 @@ require("nvim_context_mcp").setup({
 
 ## Codex
 
-After the binary is on `PATH`:
+Install the Codex plugin instead of adding the MCP server by hand. The plugin declares this repo's `.mcp.json`, so Codex starts the MCP server automatically when the plugin is enabled. The `nvim-context-mcp` binary still needs to be installed on `PATH`, and Neovim still needs to load the Lua plugin as shown above.
+
+```bash
+codex plugin marketplace add pappasam/nvim-context-mcp
+codex plugin add nvim-context-mcp@nvim-context-mcp
+```
+
+For a local checkout:
+
+```bash
+codex plugin marketplace add /path/to/nvim-context-mcp
+codex plugin add nvim-context-mcp@nvim-context-mcp
+```
+
+After installing the Codex plugin, restart Codex, start Neovim with `require("nvim_context_mcp").setup()` configured, then ask Codex to inspect the visible Neovim context.
+
+The equivalent raw MCP command, if you need to debug the plugin, is:
 
 ```bash
 codex mcp add nvim-context-mcp -- nvim-context-mcp
 ```
 
-This repo also includes `.codex-plugin/plugin.json` and `.mcp.json` so it can be packaged as a Codex plugin.
+This repo includes `.agents/plugins/marketplace.json` and `plugins/nvim-context-mcp/` so it can be installed as a Codex plugin.
 
 ## Claude Code
 
