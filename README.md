@@ -19,7 +19,36 @@ The Neovim plugin runs inside each Neovim instance and listens on a local Unix s
 
 ## Install
 
-Install the MCP server binary, then load the Neovim plugin.
+Install the MCP server binary and Neovim plugin from the same release.
+The Rust MCP server and Lua plugin speak a small internal protocol, so use matching release-tracking settings when installing or upgrading.
+
+Recommended latest-version install:
+
+```bash
+mise use -g github:pappasam/nvim-context-mcp@latest
+```
+
+Then configure Neovim to install the latest released plugin version:
+
+```lua
+vim.pack.add({
+  {
+    src = "https://github.com/pappasam/nvim-context-mcp",
+    name = "nvim-context-mcp",
+    version = vim.version.range("*"),
+  },
+}, { confirm = false })
+
+require("nvim_context_mcp").setup()
+```
+
+When upgrading, update both managed installs together so the MCP server and Neovim plugin stay on the latest release:
+
+```bash
+mise upgrade github:pappasam/nvim-context-mcp --bump
+```
+
+Then update the Neovim package with `:PackUpdate nvim-context-mcp`.
 
 ### Pre-Built Binary
 
@@ -28,21 +57,21 @@ Download the archive for your platform from the [GitHub releases](https://github
 Linux and macOS archives are named like:
 
 ```text
-nvim-context-mcp-v0.1.0-x86_64-unknown-linux-gnu.tar.gz
-nvim-context-mcp-v0.1.0-x86_64-apple-darwin.tar.gz
-nvim-context-mcp-v0.1.0-aarch64-apple-darwin.tar.gz
+nvim-context-mcp-<version>-x86_64-unknown-linux-gnu.tar.gz
+nvim-context-mcp-<version>-x86_64-apple-darwin.tar.gz
+nvim-context-mcp-<version>-aarch64-apple-darwin.tar.gz
 ```
 
 Windows archives are named like:
 
 ```text
-nvim-context-mcp-v0.1.0-x86_64-pc-windows-msvc.zip
+nvim-context-mcp-<version>-x86_64-pc-windows-msvc.zip
 ```
 
 To install manually on Linux or macOS:
 
 ```bash
-version=v0.1.0
+version=<latest-release-tag>
 target=x86_64-unknown-linux-gnu
 curl -LO "https://github.com/pappasam/nvim-context-mcp/releases/download/${version}/nvim-context-mcp-${version}-${target}.tar.gz"
 tar -xzf "nvim-context-mcp-${version}-${target}.tar.gz"
@@ -62,13 +91,7 @@ On macOS, use `shasum -a 256` to compare the downloaded archive against `SHA256S
 If you use [mise-en-place](https://mise.jdx.dev/), install from GitHub releases with the `github` backend:
 
 ```bash
-mise use -g github:pappasam/nvim-context-mcp
-```
-
-Pin a specific release with:
-
-```bash
-mise use -g github:pappasam/nvim-context-mcp@0.1.0
+mise use -g github:pappasam/nvim-context-mcp@latest
 ```
 
 ### From Source
@@ -81,9 +104,11 @@ cargo install --path .
 
 ### Neovim Plugin
 
-Load the Neovim plugin with your plugin manager, or add this repo to `runtimepath` and call:
+Load the Neovim plugin with your plugin manager, tracking the same release stream as the MCP server binary.
+If you are actively developing from a local checkout, add that checkout to `runtimepath` instead:
 
 ```lua
+vim.opt.runtimepath:prepend("/path/to/nvim-context-mcp")
 require("nvim_context_mcp").setup()
 ```
 
