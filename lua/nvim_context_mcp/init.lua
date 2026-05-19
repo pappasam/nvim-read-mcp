@@ -19,6 +19,8 @@ local defaults = {
   include_terminal_buffers = false,
   max_lines_per_window = 200,
   max_bytes_per_window = 20000,
+  max_lines_per_buffer = 1000,
+  max_bytes_per_buffer = 100000,
   heartbeat_ms = 5000,
   debounce_ms = 150,
 }
@@ -184,11 +186,109 @@ function M.visible_context()
   }
 end
 
+function M.buffers()
+  local buffers = {}
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buf) then
+      table.insert(buffers, buffer_summary(buf))
+    end
+  end
+
+  table.sort(buffers, function(left, right)
+    if left.listed ~= right.listed then
+      return left.listed
+    end
+    if left.loaded ~= right.loaded then
+      return left.loaded
+    end
+    return left.bufnr < right.bufnr
+  end)
+
+  return {
+    schemaVersion = 1,
+    source = "nvim-context-mcp",
+    instanceId = state.instance_id,
+    pid = vim.fn.getpid(),
+    host = vim.fn.hostname(),
+    cwd = vim.fn.getcwd(),
+    updatedAt = os.time(),
+    buffers = buffers,
+  }
+end
+
+function M.buffer_text(params)
+  params = params or {}
+  local buf = resolve_buffer(params)
+  ensure_loaded_buffer(buf)
+
+  local line_count = vim.api.nvim_buf_line_count(buf)
+  local start_line = clamp_line(params.startLine or 1, line_count + 1)
+  local end_line = clamp_line(params.endLine or line_count, line_count)
+  if end_line < start_line then
+    end_line = start_line - 1
+  end
+
+  local max_lines = params.maxLines or state.opts.max_lines_per_buffer
+  local max_bytes = params.maxBytes or state.opts.max_bytes_per_buffer
+  local lines, truncated = lines_from_buffer(buf, start_line, end_line, max_lines, max_bytes)
+
+  return {
+    schemaVersion = 1,
+    source = "nvim-context-mcp",
+    instanceId = state.instance_id,
+    buffer = buffer_summary(buf),
+    range = { start = start_line, ["end"] = end_line },
+    text = lines,
+    truncated = truncated,
+  }
+end
+
+function M.diagnostics(params)
+  params = params or {}
+  local buffers = {}
+  if params.bufnr or params.path then
+    buffers = { resolve_buffer(params) }
+  else
+    buffers = vim.api.nvim_list_bufs()
+  end
+
+  local result = {}
+  for _, buf in ipairs(buffers) do
+    if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf) then
+      local diagnostics = {}
+      for _, diagnostic in ipairs(vim.diagnostic.get(buf)) do
+        table.insert(diagnostics, diagnostic_summary(diagnostic))
+      end
+      table.insert(result, {
+        buffer = buffer_summary(buf),
+        diagnostics = diagnostics,
+      })
+    end
+  end
+
+  return {
+    schemaVersion = 1,
+    source = "nvim-context-mcp",
+    instanceId = state.instance_id,
+    pid = vim.fn.getpid(),
+    host = vim.fn.hostname(),
+    cwd = vim.fn.getcwd(),
+    updatedAt = os.time(),
+    buffers = result,
+  }
+end
+
 function M.handle_request(request)
   if request.method == "ping" then
     return { ok = true }
   elseif request.method == "visible_context" then
     return M.visible_context()
+  elseif request.method == "buffers" then
+    return M.buffers()
+  elseif request.method == "buffer_text" then
+    return M.buffer_text(request.params)
+  elseif request.method == "diagnostics" then
+    return M.diagnostics(request.params)
   end
 
   error("unknown method: " .. tostring(request.method))
@@ -285,23 +385,122 @@ function window_context(win, current)
 end
 
 function visible_lines(buf, start_line, end_line)
+  local lines = lines_from_buffer(
+    buf,
+    start_line,
+    end_line,
+    state.opts.max_lines_per_window,
+    state.opts.max_bytes_per_window
+  )
+
+  return lines
+end
+
+function lines_from_buffer(buf, start_line, end_line, max_lines, max_bytes)
   local line_count = math.max(0, end_line - start_line + 1)
-  local max_lines = math.min(line_count, state.opts.max_lines_per_window)
-  local lines = vim.api.nvim_buf_get_lines(buf, start_line - 1, start_line - 1 + max_lines, false)
-  local max_bytes = state.opts.max_bytes_per_window
+  local limited_lines = math.min(line_count, max_lines)
+  local lines = vim.api.nvim_buf_get_lines(buf, start_line - 1, start_line - 1 + limited_lines, false)
   local used = 0
   local out = {}
+  local truncated = limited_lines < line_count
 
   for _, line in ipairs(lines) do
     used = used + #line + 1
     if used > max_bytes then
-      table.insert(out, "[truncated]")
+      truncated = true
       break
     end
     table.insert(out, line)
   end
 
-  return out
+  return out, truncated
+end
+
+function buffer_summary(buf)
+  local path = vim.api.nvim_buf_get_name(buf)
+  local loaded = vim.api.nvim_buf_is_loaded(buf)
+  local line_count = loaded and vim.api.nvim_buf_line_count(buf) or 0
+  return {
+    bufnr = buf,
+    path = path,
+    name = path ~= "" and vim.fn.fnamemodify(path, ":t") or "[No Name]",
+    filetype = loaded and vim.bo[buf].filetype or "",
+    buftype = loaded and vim.bo[buf].buftype or "",
+    modified = loaded and vim.bo[buf].modified or false,
+    listed = vim.bo[buf].buflisted,
+    loaded = loaded,
+    lineCount = line_count,
+  }
+end
+
+function resolve_buffer(params)
+  if params.bufnr then
+    local bufnr = tonumber(params.bufnr)
+    if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
+      return bufnr
+    end
+    error("invalid buffer number: " .. tostring(params.bufnr))
+  end
+
+  if params.path then
+    local target = vim.fn.fnamemodify(params.path, ":p")
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      local path = vim.api.nvim_buf_get_name(buf)
+      if path ~= "" and vim.fn.fnamemodify(path, ":p") == target then
+        return buf
+      end
+    end
+    error("buffer not found for path: " .. tostring(params.path))
+  end
+
+  return vim.api.nvim_get_current_buf()
+end
+
+function ensure_loaded_buffer(buf)
+  if not vim.api.nvim_buf_is_loaded(buf) then
+    error("buffer is not loaded: " .. tostring(buf))
+  end
+end
+
+function clamp_line(value, max_line)
+  local line = tonumber(value) or 1
+  line = math.floor(line)
+  if line < 1 then
+    return 1
+  end
+  if line > max_line then
+    return max_line
+  end
+  return line
+end
+
+function diagnostic_summary(diagnostic)
+  local namespace = vim.diagnostic.get_namespace(diagnostic.namespace)
+  return {
+    line = diagnostic.lnum + 1,
+    column = diagnostic.col,
+    endLine = diagnostic.end_lnum and (diagnostic.end_lnum + 1) or nil,
+    endColumn = diagnostic.end_col,
+    severity = severity_name(diagnostic.severity),
+    message = diagnostic.message,
+    source = diagnostic.source,
+    code = diagnostic.code,
+    namespace = namespace and namespace.name or tostring(diagnostic.namespace),
+  }
+end
+
+function severity_name(severity)
+  if severity == vim.diagnostic.severity.ERROR then
+    return "ERROR"
+  elseif severity == vim.diagnostic.severity.WARN then
+    return "WARN"
+  elseif severity == vim.diagnostic.severity.INFO then
+    return "INFO"
+  elseif severity == vim.diagnostic.severity.HINT then
+    return "HINT"
+  end
+
+  return tostring(severity)
 end
 
 return M

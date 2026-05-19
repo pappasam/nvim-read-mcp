@@ -1,4 +1,6 @@
 use serde::Deserialize;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 use serde_json::json;
 use tokio::io::AsyncBufReadExt;
@@ -13,10 +15,30 @@ use crate::registry;
 const SERVER_NAME: &str = "nvim-context-mcp";
 const JSON_MIME: &str = "application/json";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct InstanceParams {
     instance_id: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BufferTextParams {
+    instance_id: Option<String>,
+    bufnr: Option<u64>,
+    path: Option<String>,
+    start_line: Option<u64>,
+    end_line: Option<u64>,
+    max_lines: Option<u64>,
+    max_bytes: Option<u64>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DiagnosticsParams {
+    instance_id: Option<String>,
+    bufnr: Option<u64>,
+    path: Option<String>,
 }
 
 pub async fn run_stdio_server() -> anyhow::Result<()> {
@@ -142,36 +164,91 @@ async fn read_resource(params: &Value) -> anyhow::Result<Value> {
 fn tools_list() -> Value {
     json!({
         "tools": [
-            {
-                "name": "nvim_list_instances",
-                "description": "List live Neovim instances registered by the read-only plugin.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {},
-                    "additionalProperties": false
-                },
-                "annotations": {
-                    "readOnlyHint": true
-                }
-            },
-            {
-                "name": "nvim_get_visible_context",
-                "description": "Get visible windows from the most recent Neovim instance, or a specific instance.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "instanceId": {
-                            "type": "string",
-                            "description": "Optional Neovim instance ID or pid."
-                        }
-                    },
-                    "additionalProperties": false
-                },
-                "annotations": {
-                    "readOnlyHint": true
-                }
-            }
+            read_only_tool(
+                "nvim_list_instances",
+                "List live Neovim instances registered by the read-only plugin.",
+                json!({})
+            ),
+            read_only_tool(
+                "nvim_get_visible_context",
+                "Get visible windows from the most recent Neovim instance, or a specific instance.",
+                instance_properties()
+            ),
+            read_only_tool(
+                "nvim_list_buffers",
+                "List Neovim buffers with metadata only. Does not include buffer text.",
+                instance_properties()
+            ),
+            read_only_tool(
+                "nvim_get_buffer_text",
+                "Get text from one loaded Neovim buffer. Use nvim_list_buffers first, then request a bounded line range when possible.",
+                json!({
+                    "instanceId": instance_id_property(),
+                    "bufnr": integer_property("Buffer number. Defaults to the current buffer when omitted."),
+                    "path": string_property("Buffer path. Used only when bufnr is omitted."),
+                    "startLine": bounded_integer_property("1-based first line to return."),
+                    "endLine": bounded_integer_property("1-based last line to return."),
+                    "maxLines": bounded_integer_property("Maximum number of lines to return."),
+                    "maxBytes": bounded_integer_property("Maximum bytes of text to return.")
+                })
+            ),
+            read_only_tool(
+                "nvim_get_diagnostics",
+                "Get current Neovim diagnostics for one buffer, or all loaded buffers if no buffer is specified.",
+                json!({
+                    "instanceId": instance_id_property(),
+                    "bufnr": integer_property("Buffer number. Defaults to all loaded buffers when omitted."),
+                    "path": string_property("Buffer path. Used only when bufnr is omitted.")
+                })
+            )
         ]
+    })
+}
+
+fn read_only_tool(name: &str, description: &str, properties: Value) -> Value {
+    json!({
+        "name": name,
+        "description": description,
+        "inputSchema": {
+            "type": "object",
+            "properties": properties,
+            "additionalProperties": false
+        },
+        "annotations": {
+            "readOnlyHint": true
+        }
+    })
+}
+
+fn instance_properties() -> Value {
+    json!({
+        "instanceId": instance_id_property()
+    })
+}
+
+fn instance_id_property() -> Value {
+    string_property("Optional Neovim instance ID or pid.")
+}
+
+fn string_property(description: &str) -> Value {
+    json!({
+        "type": "string",
+        "description": description
+    })
+}
+
+fn integer_property(description: &str) -> Value {
+    json!({
+        "type": "integer",
+        "description": description
+    })
+}
+
+fn bounded_integer_property(description: &str) -> Value {
+    json!({
+        "type": "integer",
+        "minimum": 1,
+        "description": description
     })
 }
 
@@ -185,13 +262,51 @@ async fn call_tool(params: &Value) -> anyhow::Result<Value> {
     let value = match name {
         "nvim_list_instances" => serde_json::to_value(registry::list_instances().await?)?,
         "nvim_get_visible_context" => {
-            let params: InstanceParams =
-                serde_json::from_value(arguments).unwrap_or(InstanceParams { instance_id: None });
+            let params: InstanceParams = decode_args(arguments)?;
             visible_context(params.instance_id.as_deref()).await?
+        }
+        "nvim_list_buffers" => {
+            let params: InstanceParams = decode_args(arguments)?;
+            nvim_context(params.instance_id.as_deref(), "buffers", Value::Null).await?
+        }
+        "nvim_get_buffer_text" => {
+            let params: BufferTextParams = decode_args(arguments)?;
+            let instance_id = params.instance_id.clone();
+            nvim_context(
+                instance_id.as_deref(),
+                "buffer_text",
+                serde_json::to_value(params)?,
+            )
+            .await?
+        }
+        "nvim_get_diagnostics" => {
+            let params: DiagnosticsParams = decode_args(arguments)?;
+            let instance_id = params.instance_id.clone();
+            nvim_context(
+                instance_id.as_deref(),
+                "diagnostics",
+                serde_json::to_value(params)?,
+            )
+            .await?
         }
         other => anyhow::bail!("unknown tool: {other}"),
     };
 
+    tool_response(value)
+}
+
+fn decode_args<T>(arguments: Value) -> anyhow::Result<T>
+where
+    T: Default + DeserializeOwned,
+{
+    if arguments.is_null() {
+        return Ok(T::default());
+    }
+
+    serde_json::from_value(arguments).map_err(Into::into)
+}
+
+fn tool_response(value: Value) -> anyhow::Result<Value> {
     Ok(json!({
         "content": [{
             "type": "text",
@@ -203,6 +318,14 @@ async fn call_tool(params: &Value) -> anyhow::Result<Value> {
 }
 
 async fn visible_context(instance_id: Option<&str>) -> anyhow::Result<Value> {
+    nvim_context(instance_id, "visible_context", Value::Null).await
+}
+
+async fn nvim_context(
+    instance_id: Option<&str>,
+    method: &str,
+    params: Value,
+) -> anyhow::Result<Value> {
     let Some(instance) = registry::find_instance(instance_id).await? else {
         return Ok(json!({
             "instances": [],
@@ -210,5 +333,5 @@ async fn visible_context(instance_id: Option<&str>) -> anyhow::Result<Value> {
         }));
     };
 
-    nvim::call(&instance, "visible_context", Value::Null).await
+    nvim::call(&instance, method, params).await
 }
