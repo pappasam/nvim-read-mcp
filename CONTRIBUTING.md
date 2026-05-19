@@ -43,12 +43,12 @@ Prefer pull-based context APIs. Add metadata/listing tools before adding bulk te
 Before committing Rust changes, run:
 
 ```bash
-cargo fmt
-cargo check
-cargo test
+make tests
 ```
 
-There is currently no dedicated Lua test harness. For Lua changes, start Neovim with the plugin enabled and exercise the affected MCP method through the Rust server or by calling the module functions directly in Neovim.
+Use `make lint` for Rust formatting and compile checks, `make lua-smoke` for the headless Neovim plugin smoke test, and `make fix` to format Rust files in-place.
+
+There is currently no dedicated Lua unit test harness. For deeper Lua changes, also start Neovim with the plugin enabled and exercise the affected MCP method through the Rust server or by calling the module functions directly in Neovim.
 
 ## Documentation
 
