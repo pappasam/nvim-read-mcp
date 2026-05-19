@@ -1,0 +1,23 @@
+{
+  "name": "nvim-context-mcp",
+  "owner": {
+    "name": "pappasam"
+  },
+  "description": "Claude Code plugin marketplace for nvim-context-mcp.",
+  "plugins": [
+    {
+      "name": "nvim-context-mcp",
+      "source": "./",
+      "description": "Read-only MCP bridge that lets Claude Code inspect visible Neovim context.",
+      "version": "0.1.0",
+      "author": {
+        "name": "pappasam",
+        "url": "https://github.com/pappasam"
+      },
+      "homepage": "https://github.com/pappasam/nvim-context-mcp",
+      "repository": "https://github.com/pappasam/nvim-context-mcp",
+      "license": "MIT",
+      "keywords": ["neovim", "mcp", "claude", "editor-context"]
+    }
+  ]
+}

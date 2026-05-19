@@ -140,7 +140,32 @@ This repo also includes `.codex-plugin/plugin.json` and `.mcp.json` so it can be
 
 ## Claude Code
 
-Add the MCP server to Claude Code with this MCP server entry:
+Install the Claude Code plugin instead of editing `settings.json` by hand. The plugin declares this repo's `.mcp.json`, so Claude Code starts the MCP server automatically when the plugin is enabled. The `nvim-context-mcp` binary still needs to be installed on `PATH`, and Neovim still needs to load the Lua plugin as shown above.
+
+From inside Claude Code:
+
+```bash
+/plugin marketplace add pappasam/nvim-context-mcp
+/plugin install nvim-context-mcp@nvim-context-mcp
+/reload-plugins
+```
+
+Or use the non-interactive CLI:
+
+```bash
+claude plugin marketplace add pappasam/nvim-context-mcp
+claude plugin install nvim-context-mcp@nvim-context-mcp
+```
+
+For a local checkout, load the plugin directly for one Claude Code session:
+
+```bash
+claude --plugin-dir /path/to/nvim-context-mcp
+```
+
+After installing or loading the Claude Code plugin, start Neovim with `require("nvim_context_mcp").setup()` configured, then ask Claude Code to list live Neovim instances or read the visible buffer context.
+
+The equivalent raw MCP configuration, if you need to debug the plugin, is:
 
 ```json
 {

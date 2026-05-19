@@ -93,19 +93,29 @@ Restart Codex after changing MCP configuration. With Neovim still running, ask C
 
 ### Claude Code
 
-Claude Code can use the same stdio MCP server command. With the installed binary on `PATH`, add this MCP server entry:
+Claude Code should normally be tested through the packaged plugin metadata rather than a hand-written MCP settings entry. With the installed binary on `PATH`, start a one-off Claude Code session that loads this checkout as a plugin:
 
-```json
-{
-  "mcpServers": {
-    "nvim-context-mcp": {
-      "command": "nvim-context-mcp"
-    }
-  }
-}
+```bash
+claude --plugin-dir /path/to/nvim-context-mcp
 ```
 
-For an uninstalled debug build, use the absolute binary path:
+To test the marketplace installation path from this checkout, add the local marketplace and install the plugin:
+
+```bash
+/plugin marketplace add /path/to/nvim-context-mcp
+/plugin install nvim-context-mcp@nvim-context-mcp
+/reload-plugins
+```
+
+For the published GitHub marketplace path, use:
+
+```bash
+/plugin marketplace add pappasam/nvim-context-mcp
+/plugin install nvim-context-mcp@nvim-context-mcp
+/reload-plugins
+```
+
+For an uninstalled debug build, update `.mcp.json` temporarily or add a separate MCP server entry that points at the absolute binary path:
 
 ```json
 {
@@ -117,7 +127,19 @@ For an uninstalled debug build, use the absolute binary path:
 }
 ```
 
-Restart Claude Code after changing MCP configuration. With Neovim still running, ask Claude Code to list live Neovim instances or read the visible buffer context.
+The release plugin's `.mcp.json` uses the installed command:
+
+```json
+{
+  "mcpServers": {
+    "nvim-context-mcp": {
+      "command": "nvim-context-mcp"
+    }
+  }
+}
+```
+
+Restart Claude Code or run `/reload-plugins` after changing plugin or MCP configuration. With Neovim still running, ask Claude Code to list live Neovim instances or read the visible buffer context.
 
 ## Development Workflow
 
