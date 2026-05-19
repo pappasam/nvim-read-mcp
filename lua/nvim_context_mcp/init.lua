@@ -21,6 +21,7 @@ local defaults = {
   max_bytes_per_window = 20000,
   max_lines_per_buffer = 1000,
   max_bytes_per_buffer = 100000,
+  max_diagnostics = 1000,
   heartbeat_ms = 5000,
   debounce_ms = 150,
 }
@@ -31,6 +32,11 @@ end
 
 function M.start(opts)
   state.opts = vim.tbl_deep_extend("force", defaults, opts or {})
+  if state.server then
+    M.write_registry()
+    return
+  end
+
   state.state_dir = state.opts.state_dir
     or vim.env.NVIM_CONTEXT_MCP_STATE_DIR
     or vim.env.NVIM_READ_MCP_STATE_DIR
@@ -253,11 +259,26 @@ function M.diagnostics(params)
   end
 
   local result = {}
+  local max_diagnostics = positive_integer(params.maxDiagnostics, state.opts.max_diagnostics)
+  local remaining = max_diagnostics
+  local truncated = false
+  local severity_filter = normalize_severity(params.severity)
   for _, buf in ipairs(buffers) do
+    if remaining <= 0 then
+      truncated = true
+      break
+    end
     if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf) then
       local diagnostics = {}
       for _, diagnostic in ipairs(vim.diagnostic.get(buf)) do
-        table.insert(diagnostics, diagnostic_summary(diagnostic))
+        if not severity_filter or diagnostic.severity == severity_filter then
+          if remaining <= 0 then
+            truncated = true
+            break
+          end
+          table.insert(diagnostics, diagnostic_summary(diagnostic))
+          remaining = remaining - 1
+        end
       end
       table.insert(result, {
         buffer = buffer_summary(buf),
@@ -275,6 +296,8 @@ function M.diagnostics(params)
     cwd = vim.fn.getcwd(),
     updatedAt = os.time(),
     buffers = result,
+    truncated = truncated,
+    maxDiagnostics = max_diagnostics,
   }
 end
 
@@ -302,6 +325,7 @@ function handle_client(client)
       return
     end
     if not chunk then
+      client:close()
       return
     end
 
@@ -397,6 +421,9 @@ function visible_lines(buf, start_line, end_line)
 end
 
 function lines_from_buffer(buf, start_line, end_line, max_lines, max_bytes)
+  max_lines = positive_integer(max_lines, state.opts.max_lines_per_buffer)
+  max_bytes = positive_integer(max_bytes, state.opts.max_bytes_per_buffer)
+
   local line_count = math.max(0, end_line - start_line + 1)
   local limited_lines = math.min(line_count, max_lines)
   local lines = vim.api.nvim_buf_get_lines(buf, start_line - 1, start_line - 1 + limited_lines, false)
@@ -472,6 +499,41 @@ function clamp_line(value, max_line)
     return max_line
   end
   return line
+end
+
+function positive_integer(value, fallback)
+  local number = tonumber(value)
+  if not number or number < 1 then
+    number = tonumber(fallback) or 1
+  end
+
+  number = math.floor(number)
+  if number < 1 then
+    return 1
+  end
+  return number
+end
+
+function normalize_severity(value)
+  if value == nil or value == "" then
+    return nil
+  end
+  if type(value) == "number" then
+    return value
+  end
+
+  local normalized = tostring(value):upper()
+  if normalized == "ERROR" then
+    return vim.diagnostic.severity.ERROR
+  elseif normalized == "WARN" or normalized == "WARNING" then
+    return vim.diagnostic.severity.WARN
+  elseif normalized == "INFO" then
+    return vim.diagnostic.severity.INFO
+  elseif normalized == "HINT" then
+    return vim.diagnostic.severity.HINT
+  end
+
+  error("invalid diagnostic severity: " .. tostring(value))
 end
 
 function diagnostic_summary(diagnostic)

@@ -39,6 +39,7 @@ require("nvim_context_mcp").setup({
   max_bytes_per_window = 20000,
   max_lines_per_buffer = 1000,
   max_bytes_per_buffer = 100000,
+  max_diagnostics = 1000,
 })
 ```
 

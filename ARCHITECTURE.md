@@ -50,7 +50,9 @@ It does not expose edit, command, shell, or remote-control tools.
 
 `nvim_get_buffer_text` returns text from one loaded buffer. Pass `bufnr` or `path`, plus `startLine`, `endLine`, `maxLines`, or `maxBytes` to keep the result small. If no buffer is specified, it reads the current buffer.
 
-`nvim_get_diagnostics` returns current `vim.diagnostic` messages for one buffer when `bufnr` or `path` is provided. If no buffer is specified, it returns diagnostics for all loaded buffers.
+`nvim_get_diagnostics` returns current `vim.diagnostic` messages for one buffer when `bufnr` or `path` is provided.
+If no buffer is specified, it returns diagnostics for all loaded buffers, bounded by `maxDiagnostics`.
+Pass `severity` to filter to `ERROR`, `WARN`, `INFO`, or `HINT`.
 
 The tools are intentionally pull-based to avoid filling the agent context with unneeded editor state. A client can list buffers first, inspect visible windows, and then request text or diagnostics for only the relevant buffer and line range.
 

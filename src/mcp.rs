@@ -39,6 +39,8 @@ struct DiagnosticsParams {
     instance_id: Option<String>,
     bufnr: Option<u64>,
     path: Option<String>,
+    max_diagnostics: Option<u64>,
+    severity: Option<String>,
 }
 
 pub async fn run_stdio_server() -> anyhow::Result<()> {
@@ -198,7 +200,9 @@ fn tools_list() -> Value {
                 json!({
                     "instanceId": instance_id_property(),
                     "bufnr": integer_property("Buffer number. Defaults to all loaded buffers when omitted."),
-                    "path": string_property("Buffer path. Used only when bufnr is omitted.")
+                    "path": string_property("Buffer path. Used only when bufnr is omitted."),
+                    "maxDiagnostics": bounded_integer_property("Maximum number of diagnostics to return."),
+                    "severity": string_property("Optional severity filter: ERROR, WARN, INFO, or HINT.")
                 })
             )
         ]
@@ -334,4 +338,42 @@ async fn nvim_context(
     };
 
     nvim::call(&instance, method, params).await
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn diagnostics_schema_includes_bounds_and_filter() {
+        let tools = tools_list();
+        let diagnostics_tool = tools["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|tool| tool["name"] == "nvim_get_diagnostics")
+            .unwrap();
+        let properties = &diagnostics_tool["inputSchema"]["properties"];
+
+        assert_eq!(properties["maxDiagnostics"]["minimum"], 1);
+        assert_eq!(properties["severity"]["type"], "string");
+    }
+
+    #[test]
+    fn decodes_diagnostics_bounds_and_filter() {
+        let params: DiagnosticsParams = decode_args(json!({
+            "instanceId": "host:42",
+            "bufnr": 7,
+            "maxDiagnostics": 3,
+            "severity": "WARN"
+        }))
+        .unwrap();
+
+        assert_eq!(params.instance_id.as_deref(), Some("host:42"));
+        assert_eq!(params.bufnr, Some(7));
+        assert_eq!(params.max_diagnostics, Some(3));
+        assert_eq!(params.severity.as_deref(), Some("WARN"));
+    }
 }
