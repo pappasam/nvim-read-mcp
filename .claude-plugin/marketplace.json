@@ -9,7 +9,7 @@
       "name": "nvim-context-mcp",
       "source": "./",
       "description": "Read-only MCP bridge that lets Claude Code inspect visible Neovim context.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": {
         "name": "pappasam",
         "url": "https://github.com/pappasam"

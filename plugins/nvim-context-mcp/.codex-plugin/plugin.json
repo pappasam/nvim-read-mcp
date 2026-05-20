@@ -1,6 +1,6 @@
 {
   "name": "nvim-context-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Context MCP bridge that lets Codex inspect visible Neovim context.",
   "author": {
     "name": "pappasam",
