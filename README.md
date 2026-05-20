@@ -19,16 +19,7 @@ The Neovim plugin runs inside each Neovim instance and listens on a local Unix s
 
 ## Install
 
-Install the MCP server binary and Neovim plugin from the same release.
-The Rust MCP server and Lua plugin speak a small internal protocol, so use matching release-tracking settings when installing or upgrading.
-
-Recommended latest-version install:
-
-```bash
-mise use -g github:pappasam/nvim-context-mcp@latest
-```
-
-Then configure Neovim to install the latest released plugin version:
+Install the Neovim plugin from a release tag. On first startup, the plugin downloads the matching MCP server binary from the same GitHub release, verifies its checksum, installs it under Neovim's data directory, and exposes it as `nvim-context-mcp` through `~/.local/bin` when possible.
 
 ```lua
 vim.pack.add({
@@ -42,15 +33,35 @@ vim.pack.add({
 require("nvim_context_mcp").setup()
 ```
 
-When upgrading, update both managed installs together so the MCP server and Neovim plugin stay on the latest release:
+Then install the Codex or Claude Code plugin below. The agent plugin starts `nvim-context-mcp` automatically, while the Neovim plugin owns the matching binary.
 
-```bash
-mise upgrade github:pappasam/nvim-context-mcp --bump
+Check the managed binary status from Neovim with:
+
+```vim
+:NvimContextMcp status
 ```
 
-Then update the Neovim package with `:PackUpdate nvim-context-mcp`.
+Install or repair the managed binary explicitly with:
 
-### Pre-Built Binary
+```vim
+:NvimContextMcp install
+```
+
+Optional binary configuration:
+
+```lua
+require("nvim_context_mcp").setup({
+  binary = {
+    auto_install = true,
+    expose_on_path = true,
+    bin_dir = vim.fn.expand("~/.local/bin"),
+  },
+})
+```
+
+When upgrading, update the Neovim package with `:PackUpdate nvim-context-mcp`. The next Neovim startup downloads the matching MCP server binary for the new plugin release.
+
+### Manual Binary Install
 
 Download the archive for your platform from the [GitHub releases](https://github.com/pappasam/nvim-context-mcp/releases) page.
 
@@ -58,14 +69,8 @@ Linux and macOS archives are named like:
 
 ```text
 nvim-context-mcp-<version>-x86_64-unknown-linux-gnu.tar.gz
-nvim-context-mcp-<version>-x86_64-apple-darwin.tar.gz
+nvim-context-mcp-<version>-aarch64-unknown-linux-gnu.tar.gz
 nvim-context-mcp-<version>-aarch64-apple-darwin.tar.gz
-```
-
-Windows archives are named like:
-
-```text
-nvim-context-mcp-<version>-x86_64-pc-windows-msvc.zip
 ```
 
 To install manually on Linux or macOS:
@@ -104,8 +109,7 @@ cargo install --path .
 
 ### Neovim Plugin
 
-Load the Neovim plugin with your plugin manager, tracking the same release stream as the MCP server binary.
-If you are actively developing from a local checkout, add that checkout to `runtimepath` instead:
+Load the Neovim plugin with your plugin manager, tracking the same release stream as the MCP server binary. If you are actively developing from a local checkout, add that checkout to `runtimepath` instead:
 
 ```lua
 vim.opt.runtimepath:prepend("/path/to/nvim-context-mcp")
@@ -125,12 +129,17 @@ require("nvim_context_mcp").setup({
   max_lines_per_buffer = 1000,
   max_bytes_per_buffer = 100000,
   max_diagnostics = 1000,
+  binary = {
+    auto_install = true,
+    expose_on_path = true,
+    bin_dir = vim.fn.expand("~/.local/bin"),
+  },
 })
 ```
 
 ## Codex
 
-Install the Codex plugin instead of adding the MCP server by hand. The plugin declares this repo's `.mcp.json`, so Codex starts the MCP server automatically when the plugin is enabled. The `nvim-context-mcp` binary still needs to be installed on `PATH`, and Neovim still needs to load the Lua plugin as shown above.
+Install the Codex plugin instead of adding the MCP server by hand. The plugin declares this repo's `.mcp.json`, so Codex starts the MCP server automatically when the plugin is enabled. Neovim still needs to load the Lua plugin as shown above; the Lua plugin downloads the matching `nvim-context-mcp` binary and exposes it on `PATH` when possible.
 
 ```bash
 codex plugin marketplace add pappasam/nvim-context-mcp
@@ -144,7 +153,7 @@ codex plugin marketplace add /path/to/nvim-context-mcp
 codex plugin add nvim-context-mcp@nvim-context-mcp
 ```
 
-After installing the Codex plugin, restart Codex, start Neovim with `require("nvim_context_mcp").setup()` configured, then ask Codex to inspect the visible Neovim context.
+After installing the Codex plugin, restart Codex, start Neovim with `require("nvim_context_mcp").setup()` configured, then ask Codex to inspect the visible Neovim context. If Codex cannot find `nvim-context-mcp`, run `:NvimContextMcp status` in Neovim and make sure the reported link directory is on your shell `PATH`.
 
 The equivalent raw MCP command, if you need to debug the plugin, is:
 
@@ -156,7 +165,7 @@ This repo includes `.agents/plugins/marketplace.json` and `plugins/nvim-context-
 
 ## Claude Code
 
-Install the Claude Code plugin instead of editing `settings.json` by hand. The plugin declares this repo's `.mcp.json`, so Claude Code starts the MCP server automatically when the plugin is enabled. The `nvim-context-mcp` binary still needs to be installed on `PATH`, and Neovim still needs to load the Lua plugin as shown above.
+Install the Claude Code plugin instead of editing `settings.json` by hand. The plugin declares this repo's `.mcp.json`, so Claude Code starts the MCP server automatically when the plugin is enabled. Neovim still needs to load the Lua plugin as shown above; the Lua plugin downloads the matching `nvim-context-mcp` binary and exposes it on `PATH` when possible.
 
 From inside Claude Code:
 
@@ -179,7 +188,7 @@ For a local checkout, load the plugin directly for one Claude Code session:
 claude --plugin-dir /path/to/nvim-context-mcp
 ```
 
-After installing or loading the Claude Code plugin, start Neovim with `require("nvim_context_mcp").setup()` configured, then ask Claude Code to list live Neovim instances or read the visible buffer context.
+After installing or loading the Claude Code plugin, start Neovim with `require("nvim_context_mcp").setup()` configured, then ask Claude Code to list live Neovim instances or read the visible buffer context. If Claude Code cannot find `nvim-context-mcp`, run `:NvimContextMcp status` in Neovim and make sure the reported link directory is on your shell `PATH`.
 
 The equivalent raw MCP configuration, if you need to debug the plugin, is:
 

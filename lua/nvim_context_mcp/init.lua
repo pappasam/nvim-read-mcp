@@ -1,6 +1,7 @@
 local M = {}
 
 local uv = vim.uv or vim.loop
+local binary = require("nvim_context_mcp.binary")
 
 local state = {
   server = nil,
@@ -25,6 +26,14 @@ local defaults = {
   max_diagnostics = 1000,
   heartbeat_ms = 5000,
   debounce_ms = 150,
+  binary = {
+    auto_install = true,
+    expose_on_path = true,
+    bin_dir = vim.fn.expand("~/.local/bin"),
+    force_version = nil,
+    force_target = nil,
+    extra_curl_args = {},
+  },
 }
 
 local function default_state_dir()
@@ -41,8 +50,19 @@ function M.setup(opts)
   M.start(opts)
 end
 
+function M.ensure_binary(opts)
+  binary.ensure(opts)
+end
+
+function M.binary_status()
+  return binary.status()
+end
+
 function M.start(opts)
   state.opts = vim.tbl_deep_extend("force", defaults, opts or {})
+  binary.setup(state.opts.binary)
+  binary.create_commands()
+  binary.ensure({ quiet = true })
   if state.server then
     M.write_registry()
     return
